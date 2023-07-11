@@ -1,0 +1,32 @@
+
+# defining inputs and outputs
+executable    = run.sh
+transfer_executable = true
+input = input.txt
+transfer_input_files = checkpointer.zip
+transfer_output_files = out.txt
+
+# defining logs
+log = log.txt
+output = stdout
+error = stderr
+stream_output = true
+stream_error = true
+
+# defining job requirements
+requirements = (TARGET.ProvidesCPU == TRUE) && (TARGET.ProvidesEKPResources ==True)
+request_memory = 1
+request_cpus = 1
+request_disk = 10240
+accounting_group = belle
+universe = docker
+docker_image = mschnepf/cs8-base
+
+
+# checkpointing happening here
+transfer_checkpoint_files = checkpoint.txt
+should_transfer_files = yes
+checkpoint_exit_code = 85
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+queue 1
