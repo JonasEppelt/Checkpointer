@@ -59,6 +59,7 @@ class Checkpointer:
         self.pid_file = pid_file
         self.batch_system_mode = batch_system_mode
         self.step_counter = step_counter
+        self.checkpoint_every = checkpoint_every
 
         # set up checkpointing
         self.checkpoint_function = checkpoint_function
@@ -82,7 +83,6 @@ class Checkpointer:
             "None", "HTCondor"], "batch_system_mode must be one of None, HTCondor"
         if batch_system_mode == "None":
             self.local_checkpoint_files = local_checkpoint_files
-            self.checkpoint_every = checkpoint_every
             self.checkpoint_exit_code = checkpoint_exit_code
             self.induce_checkpoint_signal = induce_checkpoint_signal
         elif batch_system_mode == "HTCondor":
@@ -93,7 +93,6 @@ class Checkpointer:
             self.write_pid()
 
         # register signal handlers
-
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
         if self.induce_checkpoint_signal:
             signal.signal(
