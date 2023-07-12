@@ -9,7 +9,7 @@ checkpointer = Checkpointer(
     restore_function=lambda path: int(path.read_text()),
     checkpoint_function=lambda path, value: path.write_text(str(value)),
     checkpoint_every=100,
-    batch_system_mode="htcondor",
+    batch_system_mode="HTCondor",
 )
 start_value = checkpointer.restore(0)
 print("starting at: ", start_value)

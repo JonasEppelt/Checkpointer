@@ -2,7 +2,7 @@
 # defining inputs and outputs
 executable    = run.sh
 transfer_executable = true
-transfer_input_files = checkpointer.tar 
+transfer_input_files = checkpointer.tar, counter.py
 should_transfer_files = YES
 +TransferOutput = ""
 
