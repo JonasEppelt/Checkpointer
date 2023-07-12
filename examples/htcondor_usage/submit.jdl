@@ -2,9 +2,9 @@
 # defining inputs and outputs
 executable    = run.sh
 transfer_executable = true
-input = input.txt
-transfer_input_files = checkpointer.tar
-transfer_output_files = out.txt
+transfer_input_files = checkpointer.tar 
+should_transfer_files = YES
++TransferOutput = ""
 
 # defining logs
 log = log.txt
@@ -25,7 +25,6 @@ docker_image = mschnepf/cs8-base
 
 # checkpointing happening here
 transfer_checkpoint_files = checkpoint.txt
-should_transfer_files = yes
 checkpoint_exit_code = 85
 when_to_transfer_output = ON_EXIT_OR_EVICT
 
