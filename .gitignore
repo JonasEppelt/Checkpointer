@@ -1,2 +1,4 @@
-*pychache*
-*eg-info*
+*pycache*
+*egg-info*
+*.txt
+*std*
