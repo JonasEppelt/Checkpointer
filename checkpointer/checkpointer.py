@@ -28,7 +28,7 @@ class Checkpointer:
         checkpoint_function: Callable = None,
         checkpoint_exit_code: int = None,  # exit code to use when checkpointing
         # signal to listen to for induced checkpointing
-        induce_checkpoint_signal: int = None,
+        induce_checkpoint_signal: int = 15,
         # whether to use a batchsystem, currently only HTCondor is supported
         batch_system_mode: str = "None",
         # how to transfer the checkpoint files, currently None(default), shared, xrootd, manual, and htcondor are supported
@@ -58,6 +58,7 @@ class Checkpointer:
         # set global default values
         self.pid_file = pid_file
         self.batch_system_mode = batch_system_mode
+        self.induce_checkpoint_signal = induce_checkpoint_signal
         self.step_counter = step_counter
         self.checkpoint_every = checkpoint_every
 
@@ -84,7 +85,7 @@ class Checkpointer:
         if batch_system_mode == "None":
             self.local_checkpoint_files = local_checkpoint_files
             self.checkpoint_exit_code = checkpoint_exit_code
-            self.induce_checkpoint_signal = induce_checkpoint_signal
+
         elif batch_system_mode == "HTCondor":
             self.set_condor_default_values()
 
@@ -96,7 +97,7 @@ class Checkpointer:
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
         if self.induce_checkpoint_signal:
             signal.signal(
-                self.induce_checkpoint_signal,
+                signal.get_signal(self.induce_checkpoint_signal),
                 self.on_InducedCheckpointSignal)
 
         # check correct settings for checkpoint_transfer_mode
