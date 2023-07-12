@@ -3,7 +3,7 @@
 executable    = run.sh
 transfer_executable = true
 input = input.txt
-transfer_input_files = checkpointer.zip
+transfer_input_files = checkpointer.tar
 transfer_output_files = out.txt
 
 # defining logs
