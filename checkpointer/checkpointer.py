@@ -48,6 +48,13 @@ class Checkpointer:
         on_SIGTERM_prehook_kwargs: dict = None,  # kwargs to pass to on_SIGTERM_prehook
 
     ) -> None:
+        # if paths are given as strings, convert them to Path objects
+        if isinstance(local_checkpoint_files, str):
+            local_checkpoint_files = Path(local_checkpoint_files)
+        if isinstance(checkpoint_transfer_target, str):
+            checkpoint_transfer_target = Path(checkpoint_transfer_target)
+        if isinstance(pid_file, str):
+            pid_file = Path(pid_file)
         # set global default values
         self.pid_file = pid_file
         self.batch_system_mode = batch_system_mode
@@ -71,12 +78,13 @@ class Checkpointer:
         self.pid = os.getpid()
 
         # set up batchsystem mode
+        assert batch_system_mode in [
+            "None", "HTCondor"], "batch_system_mode must be one of None, HTCondor"
         if batch_system_mode == "None":
             self.local_checkpoint_files = local_checkpoint_files
             self.checkpoint_every = checkpoint_every
             self.checkpoint_exit_code = checkpoint_exit_code
             self.induce_checkpoint_signal = induce_checkpoint_signal
-        # getting default values from condor job ad
         elif batch_system_mode == "HTCondor":
             self.set_condor_default_values()
 
@@ -108,8 +116,8 @@ class Checkpointer:
             ), "xrootd_server_name not set in checkpoint_transfer_callback_kwargs"
 
     def set_condor_default_values(self):
-        self.local_checkpoint_files = get_condor_job_ad_settings(
-            "TransferCheckpoint")
+        self.local_checkpoint_files = Path(get_condor_job_ad_settings(
+            "TransferCheckpoint"))
         self.induce_checkpoint_signal = get_condor_job_ad_settings(
             "+SuccessCheckpointExitSignal")
         self.checkpoint_exit_code = get_condor_job_ad_settings(
