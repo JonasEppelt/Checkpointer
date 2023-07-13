@@ -8,14 +8,13 @@ checkpointer = Checkpointer(
     local_checkpoint_files=Path("checkpoint.txt"),
     restore_function=lambda path: int(path.read_text()),
     checkpoint_function=lambda path, value: path.write_text(str(value)),
-    checkpoint_every=100,
-    batch_system_mode="HTCondor",
+    checkpoint_every=10,
 )
 start_value = checkpointer.restore(0)
 print("starting at: ", start_value)
 for i in range(start_value, 10_000):
     print(i)
     checkpointer.step(i)
-    time.sleep(10)
+    time.sleep(1)
 
 print("finished counting")
