@@ -93,14 +93,13 @@ class Checkpointer:
             assert self.checkpoint_transfer_callback is not None, "checkpoint_transfer_callback not set"
             assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
         elif self.checkpoint_transfer_mode == "htcondor":
-            print(get_condor_job_ad_settings("transfer_checkpoint_files"))
             assert not (get_condor_job_ad_settings(
-                "transfer_checkpoint_files") != ""), "transfer_checkpoint_files not set in condor job ad"
+                "TransferCheckpoint") != ""), "transfer_checkpoint_files not set in condor job ad"
 
         # setup rescheduling mode
         if self.job_reschedule_mode == "htcondor":
             self.checkpoint_exit_code = get_condor_job_ad_settings(
-                "checkpoint_exit_code")
+                "SuccessCheckpointExitCode")
             assert self.checkpoint_exit_code != "", "checkpoint_exit_code not set in condor job ad"
 
     def on_SIGTERM(self, signalNumber, frame):
