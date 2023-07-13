@@ -22,13 +22,12 @@ class Checkpointer:
         self,
         # Path or list of Paths of files defining the checkpoint
         local_checkpoint_files: Path = None,
-        pid_file: Path = None,  # Path to file containing the pid of the process
         restore_function: Callable = None,  # function to call to restore the checkpoints
         # checkpoint every n steps when used in the context of a training loop
         checkpoint_function: Callable = None,
         checkpoint_exit_code: int = None,  # exit code to use when checkpointing
         # signal to listen to for induced checkpointing
-        induce_checkpoint_signal: int = 15,
+        induce_checkpoint_signal: int = None,
         # whether to use a batchsystem, currently only HTCondor is supported
         batch_system_mode: str = "None",
         # how to transfer the checkpoint files, currently None(default), shared, xrootd, manual, and htcondor are supported
@@ -53,14 +52,12 @@ class Checkpointer:
             local_checkpoint_files = Path(local_checkpoint_files)
         if isinstance(checkpoint_transfer_target, str):
             checkpoint_transfer_target = Path(checkpoint_transfer_target)
-        if isinstance(pid_file, str):
-            pid_file = Path(pid_file)
         # set global default values
-        self.pid_file = pid_file
         self.batch_system_mode = batch_system_mode
         self.induce_checkpoint_signal = induce_checkpoint_signal
         self.step_counter = step_counter
         self.checkpoint_every = checkpoint_every
+        self.checkpoint_value = None
 
         # set up checkpointing
         self.checkpoint_function = checkpoint_function
@@ -76,9 +73,6 @@ class Checkpointer:
         self.on_SIGTERM_prehook = on_SIGTERM_prehook if on_SIGTERM_prehook else lambda: None
         self.on_SIGTERM_prehook_kwargs = on_SIGTERM_prehook_kwargs if on_SIGTERM_prehook_kwargs else {}
 
-        # get own pid
-        self.pid = os.getpid()
-
         # set up batchsystem mode
         assert batch_system_mode in [
             "None", "HTCondor"], "batch_system_mode must be one of None, HTCondor"
@@ -89,16 +83,13 @@ class Checkpointer:
         elif batch_system_mode == "HTCondor":
             self.set_condor_default_values()
 
-        # write pid to file
-        if self.pid_file:
-            self.write_pid()
-
         # register signal handlers
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
         if self.induce_checkpoint_signal:
             signal.signal(
-                signal.getsignal(self.induce_checkpoint_signal),
-                self.on_InducedCheckpointSignal)
+                self.induce_checkpoint_signal,
+                self.on_InducedCheckpointSignal,
+            )
 
         # check correct settings for checkpoint_transfer_mode
         assert self.checkpoint_transfer_mode in [
@@ -129,18 +120,19 @@ class Checkpointer:
             file.write(str(self.pid))
 
     def on_SIGTERM(self, signalNumber, frame):
-        print("Received: ", signalNumber)
+        print("on_SIGTERM, Received: ", signalNumber)
         self.on_SIGTERM_prehook(**self.on_SIGTERM_prehook_kwargs)
         self.checkpoint()
         sys.exit(self.checkpoint_exit_code)
 
     def on_InducedCheckpointSignal(self, signalNumber, frame):
-        print("Received: ", signalNumber)
+        print("on_InducedCheckpointSignal Received: ", signalNumber)
         self.checkpoint()
 
-    def checkpoint(self, value):
-        if self.checkpoint_function:
-            self.checkpoint_function(self.local_checkpoint_files, value)
+    def checkpoint(self, value=None):
+        if value is None:
+            value = self.checkpoint_value
+        self.checkpoint_function(self.local_checkpoint_files, value)
 
     def restore(self, default=None):
         self.get_checkpoint()
@@ -204,6 +196,7 @@ class Checkpointer:
                     print(status.message)
 
     def step(self, value):
+        self.checkpoint_value = value
         if self.step_counter % self.checkpoint_every == 0:
             self.checkpoint(value)
             self.transfer_checkpoint_files()
