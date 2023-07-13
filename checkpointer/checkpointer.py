@@ -118,7 +118,7 @@ class Checkpointer:
 
     def restore(self, default=None):
         self.get_checkpoint()
-        if self.restore_function and all(file.exist() for file in self.local_checkpoint_files):
+        if self.restore_function and all(file.exists() for file in self.local_checkpoint_files):
             return self.restore_function(self.local_checkpoint_files)
         return default
 
