@@ -22,7 +22,6 @@ accounting_group = belle
 universe = docker
 docker_image = mschnepf/cs8-base
 
-
 # checkpointing happening here
 transfer_checkpoint_files = checkpoint.txt
 checkpoint_exit_code = 85

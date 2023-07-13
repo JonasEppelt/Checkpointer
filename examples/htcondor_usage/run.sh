@@ -11,3 +11,7 @@ cd ../
 ls
 
 python3 counter.py & # running the script
+python_pid=$! # get the pid of the script
+trap "kill -15 $python_pid" 15 # kill the script when the job is done
+trap "kill -10 $python_pid" 10 # checkpoint the script when the job is done
+wait $python_pid # wait for the script to finish

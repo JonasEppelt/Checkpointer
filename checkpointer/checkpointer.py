@@ -23,8 +23,6 @@ class Checkpointer:
         local_checkpoint_files: Union[Path, List[Path]],
         checkpoint_function: Callable,  # function to call to create the checkpoints
         restore_function: Callable,  # function to call to restore the checkpoints
-        # batch system to use, currently None(default) and HTCondor are supported
-        job_reschedule_mode: str = "None",
         # how to trasfer the checkpoint files, currently None(default), shared, xrootd, manual and htcondor are supported
         checkpoint_transfer_mode: str = "None",
         # where to store the checkpoint files, if None, the current working directory is used
@@ -52,7 +50,6 @@ class Checkpointer:
         self.local_checkpoint_files = local_checkpoint_files
         self.checkpoint_function = checkpoint_function
         self.restore_function = restore_function
-        self.job_reschedule_mode = job_reschedule_mode
         self.checkpoint_transfer_mode = checkpoint_transfer_mode
         self.checkpoint_transfer_target = checkpoint_transfer_target
         self.checkpoint_transfer_callback = checkpoint_transfer_callback
@@ -96,12 +93,6 @@ class Checkpointer:
             print("transfer_checkpoint_files: ",
                   self.checkpoint_transfer_target)
             assert self.checkpoint_transfer_target != "", "transfer_checkpoint_files not set in condor job ad"
-
-        # setup rescheduling mode
-        if self.job_reschedule_mode == "htcondor":
-            self.checkpoint_exit_code = get_condor_job_ad_settings(
-                "SuccessCheckpointExitCode")
-            assert self.checkpoint_exit_code != "", "checkpoint_exit_code not set in condor job ad"
 
     def on_SIGTERM(self, signalNumber, frame):
         print("on_SIGTERM, Received: ", signalNumber)
