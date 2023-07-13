@@ -25,9 +25,8 @@ class Checkpointer:
         local_checkpoint_files: Union[Path, List[Path]],
         checkpoint_function: Callable,  # function to call to create the checkpoints
         restore_function: Callable,  # function to call to restore the checkpoints
-        checkpoint_exit_code: int = 85,  # exit code to use when exting with a checkpoint
         # batch system to use, currently None(default) and HTCondor are supported
-        batch_system_mode: str = "None",
+        job_reschedule_mode: str = "None",
         # how to trasfer the checkpoint files, currently None(default), shared, xrootd, manual and htcondor are supported
         checkpoint_transfer_mode: str = "None",
         # where to store the checkpoint files, if None, the current working directory is used
@@ -42,19 +41,20 @@ class Checkpointer:
         on_SIGTERM_prehook_kwargs: dict = None,  # kwargs to pass to on_SIGTERM_prehook
 
     ) -> None:
+
         # if only one checkpoint path is given, convert to list
-        if not isinstance(local_checkpoint_files, list):
-            assert isinstance(
-                local_checkpoint_files,
-                Path), "local_checkpoint_files must be a Path or a list of Paths"
+        if isinstance(local_checkpoint_files, Path):
             local_checkpoint_files = [local_checkpoint_files]
+        else:
+            assert all(
+                [isinstance(
+                    path, Path) for path in local_checkpoint_files]), "local_checkpoint_files must be a list of Paths"
 
         # set parameters
         self.local_checkpoint_files = local_checkpoint_files
         self.checkpoint_function = checkpoint_function
         self.restore_function = restore_function
-        self.checkpoint_exit_code = checkpoint_exit_code
-        self.batch_system_mode = batch_system_mode
+        self.job_reschedule_mode = job_reschedule_mode
         self.checkpoint_transfer_mode = checkpoint_transfer_mode
         self.checkpoint_transfer_target = checkpoint_transfer_target
         self.checkpoint_transfer_callback = checkpoint_transfer_callback
@@ -62,19 +62,11 @@ class Checkpointer:
         self.checkpoint_every = checkpoint_every
         self.on_SIGTERM_prehook = on_SIGTERM_prehook if on_SIGTERM_prehook else lambda: None
         self.on_SIGTERM_prehook_kwargs = on_SIGTERM_prehook_kwargs if on_SIGTERM_prehook_kwargs else {}
+        self.checkpoint_exit_code = 85
 
         # initialize internal variables
         self.step_counter = 0
         self.checkpoint_value = None
-
-        # set up batchsystem mode
-        assert batch_system_mode in [
-            "None", "HTCondor"
-        ], "batch_system_mode must be one of None, HTCondor"
-        if batch_system_mode == "None":
-            self.local_checkpoint_files = local_checkpoint_files
-        elif batch_system_mode == "HTCondor":
-            self.set_condor_default_values()
 
         # register signal handlers
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
@@ -85,7 +77,7 @@ class Checkpointer:
         ], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
         if self.checkpoint_transfer_mode != "None":
             assert self.checkpoint_transfer_target is not None, "checkpoint_transfer_target not set"
-        if self.checkpoint_transfer_mode == "shared":
+        elif self.checkpoint_transfer_mode == "shared":
             if isinstance(self.checkpoint_transfer_target, str):
                 self.checkpoint_transfer_target = Path(
                     self.checkpoint_transfer_target)
@@ -107,19 +99,10 @@ class Checkpointer:
                 "TransferCheckpoint") != ""), "TransferCheckpoint not set in condor job ad"
 
         # setup rescheduling mode
-        if batch_system_mode == "HTCondor":
-            assert not (get_condor_job_ad_settings(
-                "+SuccessCheckpointExitSignal") != ""), "+SuccessCheckpointExitSignal not set in condor job ad"
-            assert not (get_condor_job_ad_settings(
-                "checkpoint_exit_code") != ""), "checkpoint_exit_code not set in condor job ad"
-
-    def set_condor_default_values(self):
-        self.local_checkpoint_files = Path(get_condor_job_ad_settings(
-            "TransferCheckpoint"))
-        self.induce_checkpoint_signal = get_condor_job_ad_settings(
-            "+SuccessCheckpointExitSignal")
-        self.checkpoint_exit_code = get_condor_job_ad_settings(
-            "checkpoint_exit_code")
+        if self.job_reschedule_mode == "htcondor":
+            self.checkpoint_exit_code = get_condor_job_ad_settings(
+                "checkpoint_exit_code")
+            assert self.checkpoint_exit_code != "", "checkpoint_exit_code not set in condor job ad"
 
     def on_SIGTERM(self, signalNumber, frame):
         print("on_SIGTERM, Received: ", signalNumber)
