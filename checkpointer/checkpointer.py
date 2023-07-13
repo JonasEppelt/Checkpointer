@@ -75,9 +75,7 @@ class Checkpointer:
         assert self.checkpoint_transfer_mode in [
             "None", "shared", "xrootd", "manual", "htcondor"
         ], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
-        if self.checkpoint_transfer_mode != "None":
-            assert self.checkpoint_transfer_target is not None, "checkpoint_transfer_target not set"
-        elif self.checkpoint_transfer_mode == "shared":
+        if self.checkpoint_transfer_mode == "shared":
             if isinstance(self.checkpoint_transfer_target, str):
                 self.checkpoint_transfer_target = Path(
                     self.checkpoint_transfer_target)
