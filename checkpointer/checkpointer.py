@@ -97,7 +97,7 @@ class Checkpointer:
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
         if self.induce_checkpoint_signal:
             signal.signal(
-                signal.get_signal(self.induce_checkpoint_signal),
+                signal.getsignal(self.induce_checkpoint_signal),
                 self.on_InducedCheckpointSignal)
 
         # check correct settings for checkpoint_transfer_mode
