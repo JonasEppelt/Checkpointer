@@ -124,7 +124,6 @@ class Checkpointer:
         if self.checkpoint_transfer_mode == "None" or not all(file.exists() for file in self.local_checkpoint_files):
             # nothing to do
             return
-        assert self.checkpoint_storage_location is not None, "checkpoint_storage_location not set"
         if self.checkpoint_transfer_mode == "shared":
             # use cp to copy checkpoint on local system
             for i, file in enumerate(self.local_checkpoint_files):
