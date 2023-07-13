@@ -4,8 +4,6 @@ from pathlib import Path
 import signal
 import sys
 from checkpointer.checkpointing_utils import get_condor_job_ad_settings
-# from XRootD import client
-# from XRootD.client.flags import DirListFlags, OpenFlags, MkDirFlags
 
 
 class Checkpointer:
@@ -123,17 +121,20 @@ class Checkpointer:
         return default
 
     def transfer_checkpoint_files(self):
-        if self.checkpoint_transfer_mode == "None" or not self.local_checkpoint_files.exists():
+        if self.checkpoint_transfer_mode == "None" or not all(file.exists() for file in self.local_checkpoint_files):
             # nothing to do
             return
         assert self.checkpoint_storage_location is not None, "checkpoint_storage_location not set"
         if self.checkpoint_transfer_mode == "shared":
             # use cp to copy checkpoint on local system
-            os.system(
-                "cp {} {}".format(
-                    self.local_checkpoint_files,
-                    self.checkpoint_transfer_target,))
+            for i, file in enumerate(self.local_checkpoint_files):
+                os.system(
+                    "cp {} {}".format(
+                        str(file),
+                        str(self.checkpoint_transfer_target[i]),))
         elif self.checkpoint_transfer_mode == "xrootd":
+            from XRootD import client
+            from XRootD.client.flags import DirListFlags, OpenFlags, MkDirFlags
             xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
             xrootd_client = client.FileSystem(xrootd_server_name)
             status = xrootd_client.copy(
