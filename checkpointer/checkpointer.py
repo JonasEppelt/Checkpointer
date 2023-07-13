@@ -93,8 +93,11 @@ class Checkpointer:
             assert self.checkpoint_transfer_callback is not None, "checkpoint_transfer_callback not set"
             assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
         elif self.checkpoint_transfer_mode == "htcondor":
-            assert not (get_condor_job_ad_settings(
-                "TransferCheckpoint") != ""), "transfer_checkpoint_files not set in condor job ad"
+            self.checkpoint_transfer_target = Path(
+                get_condor_job_ad_settings("TransferCheckpoint"))
+            print("transfer_checkpoint_files: ",
+                  self.checkpoint_transfer_target)
+            assert self.checkpoint_transfer_target != "", "transfer_checkpoint_files not set in condor job ad"
 
         # setup rescheduling mode
         if self.job_reschedule_mode == "htcondor":
