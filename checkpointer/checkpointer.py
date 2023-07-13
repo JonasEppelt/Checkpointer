@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Union, List
 import os
 from pathlib import Path
 import signal
@@ -21,16 +21,14 @@ class Checkpointer:
     def __init__(
         self,
         # Path or list of Paths of files defining the checkpoint
-        local_checkpoint_files: Path = None,
-        restore_function: Callable = None,  # function to call to restore the checkpoints
-        # checkpoint every n steps when used in the context of a training loop
-        checkpoint_function: Callable = None,
-        checkpoint_exit_code: int = None,  # exit code to use when checkpointing
-        # signal to listen to for induced checkpointing
-        induce_checkpoint_signal: int = None,
-        # whether to use a batchsystem, currently only HTCondor is supported
+        # file or list of files defining the checkpoint
+        local_checkpoint_files: Union[Path, List[Path]],
+        checkpoint_function: Callable,  # function to call to create the checkpoints
+        restore_function: Callable,  # function to call to restore the checkpoints
+        checkpoint_exit_code: int = 85,  # exit code to use when exting with a checkpoint
+        # batch system to use, currently None(default) and HTCondor are supported
         batch_system_mode: str = "None",
-        # how to transfer the checkpoint files, currently None(default), shared, xrootd, manual, and htcondor are supported
+        # how to trasfer the checkpoint files, currently None(default), shared, xrootd, manual and htcondor are supported
         checkpoint_transfer_mode: str = "None",
         # where to store the checkpoint files, if None, the current working directory is used
         checkpoint_transfer_target: Union[str, Path] = None,
@@ -38,73 +36,82 @@ class Checkpointer:
         checkpoint_transfer_callback: Callable = None,
         # kwargs to be used in in checkpoint_transfer
         checkpoint_transfer_callback_kwargs: dict = None,
-        # counter to use in training loops, can be set if checkpointing is resumed
-        checkpoint_every: int = 10,
-        # function to call to create the checkpoints
-        step_counter: int = 0,
+        checkpoint_every: int = 10,  # how often to create checkpoints
         # function to call before exiting on SIGTERM
         on_SIGTERM_prehook: Callable = None,
         on_SIGTERM_prehook_kwargs: dict = None,  # kwargs to pass to on_SIGTERM_prehook
 
     ) -> None:
-        # if paths are given as strings, convert them to Path objects
-        if isinstance(local_checkpoint_files, str):
-            local_checkpoint_files = Path(local_checkpoint_files)
-        if isinstance(checkpoint_transfer_target, str):
-            checkpoint_transfer_target = Path(checkpoint_transfer_target)
-        # set global default values
-        self.batch_system_mode = batch_system_mode
-        self.induce_checkpoint_signal = induce_checkpoint_signal
-        self.step_counter = step_counter
-        self.checkpoint_every = checkpoint_every
-        self.checkpoint_value = None
+        # if only one checkpoint path is given, convert to list
+        if not isinstance(local_checkpoint_files, list):
+            assert isinstance(
+                local_checkpoint_files,
+                Path), "local_checkpoint_files must be a Path or a list of Paths"
+            local_checkpoint_files = [local_checkpoint_files]
 
-        # set up checkpointing
+        # set parameters
+        self.local_checkpoint_files = local_checkpoint_files
         self.checkpoint_function = checkpoint_function
         self.restore_function = restore_function
-
-        # set file transfer
+        self.checkpoint_exit_code = checkpoint_exit_code
+        self.batch_system_mode = batch_system_mode
         self.checkpoint_transfer_mode = checkpoint_transfer_mode
         self.checkpoint_transfer_target = checkpoint_transfer_target
         self.checkpoint_transfer_callback = checkpoint_transfer_callback
         self.checkpoint_transfer_callback_kwargs = checkpoint_transfer_callback_kwargs
-
-        # set up prehooks
+        self.checkpoint_every = checkpoint_every
         self.on_SIGTERM_prehook = on_SIGTERM_prehook if on_SIGTERM_prehook else lambda: None
         self.on_SIGTERM_prehook_kwargs = on_SIGTERM_prehook_kwargs if on_SIGTERM_prehook_kwargs else {}
 
+        # initialize internal variables
+        self.step_counter = 0
+        self.checkpoint_value = None
+
         # set up batchsystem mode
         assert batch_system_mode in [
-            "None", "HTCondor"], "batch_system_mode must be one of None, HTCondor"
+            "None", "HTCondor"
+        ], "batch_system_mode must be one of None, HTCondor"
         if batch_system_mode == "None":
             self.local_checkpoint_files = local_checkpoint_files
-            self.checkpoint_exit_code = checkpoint_exit_code
-
         elif batch_system_mode == "HTCondor":
             self.set_condor_default_values()
 
         # register signal handlers
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
-        if self.induce_checkpoint_signal:
-            signal.signal(
-                self.induce_checkpoint_signal,
-                self.on_InducedCheckpointSignal,
-            )
 
-        # check correct settings for checkpoint_transfer_mode
+        # setup transfer mode
         assert self.checkpoint_transfer_mode in [
-            "None", "shared", "xrootd", "manual", "htcondor"], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
+            "None", "shared", "xrootd", "manual", "htcondor"
+        ], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
         if self.checkpoint_transfer_mode != "None":
             assert self.checkpoint_transfer_target is not None, "checkpoint_transfer_target not set"
         if self.checkpoint_transfer_mode == "shared":
+            if isinstance(self.checkpoint_transfer_target, str):
+                self.checkpoint_transfer_target = Path(
+                    self.checkpoint_transfer_target)
             assert isinstance(
                 self.checkpoint_transfer_target,
-                Path,), "checkpoint_transfer_target must be a Path in shared checkpoint_transfer_mode"
+                Path), "checkpoint_transfer_target must be a Path in shared mode"
         elif self.checkpoint_transfer_mode == "xrootd":
-            assert self.checkpoint_transfer_target is not str, "checkpoint_transfer_target must be a string in xrootd mode"
+            assert isinstance(
+                self.checkpoint_transfer_target, str
+            ), "checkpoint_transfer_target must be a string in xrootd mode"
             assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
             assert "xrootd_server_name" in self.checkpoint_transfer_callback_kwargs.keys(
             ), "xrootd_server_name not set in checkpoint_transfer_callback_kwargs"
+        elif self.checkpoint_transfer_mode == "manual":
+            assert self.checkpoint_transfer_callback is not None, "checkpoint_transfer_callback not set"
+            assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
+        elif self.checkpoint_transfer_mode == "htcondor":
+            assert not (get_condor_job_ad_settings(
+                "TransferCheckpoint") != ""), "TransferCheckpoint not set in condor job ad"
+
+        # setup rescheduling mode
+        if batch_system_mode == "HTCondor":
+            assert not (get_condor_job_ad_settings(
+                "+SuccessCheckpointExitSignal") != ""), "+SuccessCheckpointExitSignal not set in condor job ad"
+            assert not (get_condor_job_ad_settings(
+                "checkpoint_exit_code") != ""), "checkpoint_exit_code not set in condor job ad"
 
     def set_condor_default_values(self):
         self.local_checkpoint_files = Path(get_condor_job_ad_settings(
@@ -114,20 +121,11 @@ class Checkpointer:
         self.checkpoint_exit_code = get_condor_job_ad_settings(
             "checkpoint_exit_code")
 
-    def write_pid(self):
-        # write pid to file
-        with open(self.pid_file, "w") as file:
-            file.write(str(self.pid))
-
     def on_SIGTERM(self, signalNumber, frame):
         print("on_SIGTERM, Received: ", signalNumber)
         self.on_SIGTERM_prehook(**self.on_SIGTERM_prehook_kwargs)
         self.checkpoint()
         sys.exit(self.checkpoint_exit_code)
-
-    def on_InducedCheckpointSignal(self, signalNumber, frame):
-        print("on_InducedCheckpointSignal Received: ", signalNumber)
-        self.checkpoint()
 
     def checkpoint(self, value=None):
         if value is None:
