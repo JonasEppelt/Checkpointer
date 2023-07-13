@@ -94,7 +94,7 @@ class Checkpointer:
             assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
         elif self.checkpoint_transfer_mode == "htcondor":
             assert not (get_condor_job_ad_settings(
-                "TransferCheckpoint") != ""), "TransferCheckpoint not set in condor job ad"
+                "transfer_checkpoint_files") != ""), "transfer_checkpoint_files not set in condor job ad"
 
         # setup rescheduling mode
         if self.job_reschedule_mode == "htcondor":
