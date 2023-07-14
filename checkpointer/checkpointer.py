@@ -27,6 +27,8 @@ class Checkpointer:
         checkpoint_transfer_mode: str = "None",
         # where to store the checkpoint files, if None, the current working directory is used
         checkpoint_transfer_target: Union[str, Path] = None,
+        # name of the xrootd server to use in xrootd mode
+        xrootd_server_name: str = None,
         # function to call when manual checkpoint_transfer_mode is used
         checkpoint_transfer_callback: Callable = None,
         # kwargs to be used in in checkpoint_transfer
@@ -66,37 +68,63 @@ class Checkpointer:
 
         # register signal handlers
         signal.signal(signal.SIGTERM, self.on_SIGTERM)
+        signal.signal(signal.SIGINT, self.on_SIGTERM)
 
         # setup transfer mode
         assert self.checkpoint_transfer_mode in [
             "None", "shared", "xrootd", "manual", "htcondor"
         ], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
+
         if self.checkpoint_transfer_mode == "shared":
             assert all([
                 isinstance(target, Path) for target in self.checkpoint_transfer_target
             ]), "checkpoint_transfer_target must be a Path in shared mode"
+
         elif self.checkpoint_transfer_mode == "xrootd":
-            assert isinstance(
-                self.checkpoint_transfer_target, str
-            ), "checkpoint_transfer_target must be a string in xrootd mode"
-            assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
-            assert "xrootd_server_name" in self.checkpoint_transfer_callback_kwargs.keys(
-            ), "xrootd_server_name not set in checkpoint_transfer_callback_kwargs"
+            assert all([
+                isinstance(target, str) for target in self.checkpoint_transfer_target
+            ]), "checkpoint_transfer_target must be a string in xrootd mode"
+            assert all([
+                target.is_absolute() for target in self.local_checkpoint_files
+            ]), "local_checkpoint_files must be absolute paths in xrootd mode"
+            assert xrootd_server_name is not None, "xrootd_server_name not set"
+            from XRootD import client
+            from XRootD.client.flags import DirListFlags
+            self.DirListFlags = DirListFlags
+            self.xrootd_server_name = xrootd_server_name
+            self.xrootd_client = client.FileSystem(xrootd_server_name)
+
         elif self.checkpoint_transfer_mode == "manual":
             assert self.checkpoint_transfer_callback is not None, "checkpoint_transfer_callback not set"
             assert self.checkpoint_transfer_callback_kwargs is not None, "checkpoint_transfer_callback_kwargs not set"
+
         elif self.checkpoint_transfer_mode == "htcondor":
             self.checkpoint_transfer_target = Path(
-                get_condor_job_ad_settings("TransferCheckpoint"))
-            print("transfer_checkpoint_files: ",
-                  self.checkpoint_transfer_target)
+                get_condor_job_ad_settings("TransferCheckpoint")
+            )
             assert self.checkpoint_transfer_target != "", "transfer_checkpoint_files not set in condor job ad"
+            self.checkpoint_exit_code = int(  # Warning! This overwrites the checkpoint_exit_code set above
+                get_condor_job_ad_settings("CheckpointExitCode")
+            )
 
     def on_SIGTERM(self, signalNumber, frame):
-        print("on_SIGTERM, Received: ", signalNumber)
+        '''
+        Fuction to call when SIGTERM is received. Calls on_SIGTERM_prehook and exits with checkpoint_exit_code.
+        '''
         self.on_SIGTERM_prehook(**self.on_SIGTERM_prehook_kwargs)
         self.checkpoint()
+        self.transfer_checkpoint_files()
+        self.clean_up_local_checkpoint_files()
         sys.exit(self.checkpoint_exit_code)
+
+    def clean_up_local_checkpoint_files(self):
+        '''
+        Removes local checkpoint files if transfer mode is not None.
+        '''
+        if self.checkpoint_transfer_mode == "None":
+            return
+        for file in self.local_checkpoint_files:
+            file.unlink()
 
     def checkpoint(self, value=None):
         if value is None:
@@ -111,8 +139,8 @@ class Checkpointer:
 
     def transfer_checkpoint_files(self):
         if self.checkpoint_transfer_mode == "None" or not all(file.exists() for file in self.local_checkpoint_files):
-            # nothing to do
             return
+
         if self.checkpoint_transfer_mode == "shared":
             # use cp to copy checkpoint on local system
             for i, file in enumerate(self.local_checkpoint_files):
@@ -120,39 +148,44 @@ class Checkpointer:
                     "cp {} {}".format(
                         file._str,
                         self.checkpoint_transfer_target[i]._str))
+
         elif self.checkpoint_transfer_mode == "xrootd":
-            from XRootD import client
-            from XRootD.client.flags import DirListFlags, OpenFlags, MkDirFlags
-            xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
-            xrootd_client = client.FileSystem(xrootd_server_name)
-            status = xrootd_client.copy(
-                'file://' + self.local_checkpoint_files,
-                xrootd_server_name + self.checkpoint_transfer_target,)
-            if not status.ok:
-                print(status.message)
+            for i, file in enumerate(self.local_checkpoint_files):
+                status, _ = self.xrootd_client.copy(
+                    'file://' + file._str,
+                    self.xrootd_server_name + self.checkpoint_transfer_target[i], force=True
+                )
+                if not status.ok:
+                    print(status.message)
+
         elif self.checkpoint_transfer_mode == "manual":
             self.checkpoint_transfer_callback(
+                self.local_checkpoint_files,
                 **self.checkpoint_transfer_callback_kwargs)
+
         elif self.checkpoint_transfer_mode == "htcondor":
             pass
 
     @property
     def checkpoint_exists(self):
         if self.checkpoint_transfer_mode == "None":
-            return self.local_checkpoint_files.exists()
+            return all(target.exists() for target in self.local_checkpoint_files)
+
         elif self.checkpoint_transfer_mode == "shared":
             return all(target.exists() for target in self.checkpoint_transfer_target)
+
         elif self.checkpoint_transfer_mode == "xrootd":
-            xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
-            xrootd_client = client.FileSystem(xrootd_server_name)
-            status, listing = self.client.stat(
-                self.checkpoint_transfer_target, DirListFlags.STAT)
-            if not status.ok:
-                return False
-            else:
-                return True
+            existence = []
+            for target in self.checkpoint_transfer_target:
+                status, listing = self.xrootd_client.stat(
+                    target, self.DirListFlags.STAT
+                )
+                existence.append(status.ok)
+            return all(existence)
 
     def get_checkpoint(self):
+        # TODO: implement manual mode
+
         if self.checkpoint_exists:
             if self.checkpoint_transfer_mode == "shared":
                 for i, file in enumerate(self.local_checkpoint_files):
@@ -160,14 +193,16 @@ class Checkpointer:
                         "cp {} {}".format(
                             self.checkpoint_transfer_target[i]._str,
                             str(file)))
+
             elif self.checkpoint_transfer_mode == "xrootd":
-                xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
-                xrootd_client = client.FileSystem(xrootd_server_name)
-                status = xrootd_client.copy(
-                    xrootd_server_name + self.checkpoint_transfer_target,
-                    self.local_checkpoint_files,)
-                if not status.ok:
-                    print(status.message)
+                for i, file in enumerate(self.local_checkpoint_files):
+                    status, _ = self.xrootd_client.copy(
+                        self.xrootd_server_name +
+                        self.checkpoint_transfer_target[i],
+                        file._str,
+                    )
+                    if not status.ok:
+                        print(status.message)
 
     def step(self, value):
         self.checkpoint_value = value
