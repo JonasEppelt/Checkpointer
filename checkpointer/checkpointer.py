@@ -90,7 +90,7 @@ class Checkpointer:
             assert xrootd_server_name is not None, "xrootd_server_name not set"
             from XRootD import client
             from XRootD.client.flags import DirListFlags
-            self.DirListFlags = DirListFlags
+            self.DirListFlags = DirListFlags  # need this later for the exists check
             self.xrootd_server_name = xrootd_server_name
             self.xrootd_client = client.FileSystem(xrootd_server_name)
 
@@ -110,6 +110,7 @@ class Checkpointer:
     def on_SIGTERM(self, signalNumber, frame):
         '''
         Fuction to call when SIGTERM is received. Calls on_SIGTERM_prehook and exits with checkpoint_exit_code.
+        Arguments are only used to match the signal handler signature.
         '''
         self.on_SIGTERM_prehook(**self.on_SIGTERM_prehook_kwargs)
         self.checkpoint()
@@ -127,17 +128,32 @@ class Checkpointer:
             file.unlink()
 
     def checkpoint(self, value=None):
+        '''
+        Function to create a checkpoint. Calls checkpoint_function with local_checkpoint_files and value as arguments.
+        The checkpoint_function should store the checkpoint in the files given in local_checkpoint_files.
+        The checkpoint_function receives the local_checkpoint_file and the value as arguments.
+        If value is None, the last checkpoint_value is used.
+        '''
         if value is None:
             value = self.checkpoint_value
         self.checkpoint_function(self.local_checkpoint_files, value)
+        self.checkpoint_value = value
 
-    def restore(self, default=None):
+    def restore(self, default):
+        '''
+        Function to restore a checkpoint. Calls restore_function with local_checkpoint_file as argument.
+        If no checkpoint exists, default is returned.
+        '''
         self.get_checkpoint()
         if self.restore_function and all(file.exists() for file in self.local_checkpoint_files):
             return self.restore_function(self.local_checkpoint_files)
         return default
 
     def transfer_checkpoint_files(self):
+        '''
+        Function to transfer checkpoint files to a remote location. Used in shared, xrootd and manual mode.
+        In manual mode, the checkpoint_transfer_callback is called with local_checkpoint_files, checkpoint_transfer_target and checkpoint_transfer_callback_kwargs as arguments.
+        '''
         if self.checkpoint_transfer_mode == "None" or not all(file.exists() for file in self.local_checkpoint_files):
             return
 
@@ -161,6 +177,7 @@ class Checkpointer:
         elif self.checkpoint_transfer_mode == "manual":
             self.checkpoint_transfer_callback(
                 self.local_checkpoint_files,
+                self.checkpoint_transfer_target,
                 **self.checkpoint_transfer_callback_kwargs)
 
         elif self.checkpoint_transfer_mode == "htcondor":
@@ -168,6 +185,11 @@ class Checkpointer:
 
     @property
     def checkpoint_exists(self):
+        '''
+        Property to check if a previous checkpoint exists. 
+        Without transfer, this is just a check if the local_checkpoint_files exist.
+        In shared and xrootd mode, this is a check if the checkpoint_transfer_target exists.
+        '''
         if self.checkpoint_transfer_mode == "None":
             return all(target.exists() for target in self.local_checkpoint_files)
 
@@ -184,6 +206,9 @@ class Checkpointer:
             return all(existence)
 
     def get_checkpoint(self):
+        '''
+        Function to get the checkpoint files from a remote location. Used in shared and xrootd mode.
+        '''
         # TODO: implement manual mode
 
         if self.checkpoint_exists:
@@ -205,6 +230,10 @@ class Checkpointer:
                         print(status.message)
 
     def step(self, value):
+        '''
+        Function to call to create a checkpoint every checkpoint_every steps.
+        Used for compatiblity with pytorch-lightning, tensorflow and other frameworks.
+        '''
         self.checkpoint_value = value
         if self.step_counter % self.checkpoint_every == 0:
             self.checkpoint(value)
