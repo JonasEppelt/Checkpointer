@@ -155,8 +155,11 @@ class Checkpointer:
     def get_checkpoint(self):
         if self.checkpoint_exists:
             if self.checkpoint_transfer_mode == "shared":
-                os.system("cp {} {}".format(
-                    self.checkpoint_transfer_target, self.local_checkpoint_files))
+                for i, file in enumerate(self.local_checkpoint_files):
+                    os.system(
+                        "cp {} {}".format(
+                            self.checkpoint_transfer_target[i]._str,
+                            str(file)))
             elif self.checkpoint_transfer_mode == "xrootd":
                 xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
                 xrootd_client = client.FileSystem(xrootd_server_name)
