@@ -41,11 +41,12 @@ class Checkpointer:
         # if only one checkpoint path is given, convert to list
         if isinstance(local_checkpoint_files, Path):
             local_checkpoint_files = [local_checkpoint_files]
-        else:
-            assert all(
-                [isinstance(
-                    path, Path) for path in local_checkpoint_files]), "local_checkpoint_files must be a list of Paths"
-
+        assert all(
+            [isinstance(
+                path, Path) for path in local_checkpoint_files]), "local_checkpoint_files must be a list of Paths"
+        # if only one checkpoint storage path is given, convert to list
+        if not isinstance(checkpoint_transfer_target, list):
+            checkpoint_transfer_target = [checkpoint_transfer_target]
         # set parameters
         self.local_checkpoint_files = local_checkpoint_files
         self.checkpoint_function = checkpoint_function
@@ -71,12 +72,9 @@ class Checkpointer:
             "None", "shared", "xrootd", "manual", "htcondor"
         ], "checkpoint_transfer_mode must be one of None, shared, xrootd, manual, htcondor"
         if self.checkpoint_transfer_mode == "shared":
-            if isinstance(self.checkpoint_transfer_target, str):
-                self.checkpoint_transfer_target = Path(
-                    self.checkpoint_transfer_target)
-            assert isinstance(
-                self.checkpoint_transfer_target,
-                Path), "checkpoint_transfer_target must be a Path in shared mode"
+            assert all([
+                isinstance(target, Path) for target in self.checkpoint_transfer_target
+            ]), "checkpoint_transfer_target must be a Path in shared mode"
         elif self.checkpoint_transfer_mode == "xrootd":
             assert isinstance(
                 self.checkpoint_transfer_target, str
@@ -120,8 +118,8 @@ class Checkpointer:
             for i, file in enumerate(self.local_checkpoint_files):
                 os.system(
                     "cp {} {}".format(
-                        str(file),
-                        str(self.checkpoint_transfer_target[i]),))
+                        file._str,
+                        self.checkpoint_transfer_target[i]._str))
         elif self.checkpoint_transfer_mode == "xrootd":
             from XRootD import client
             from XRootD.client.flags import DirListFlags, OpenFlags, MkDirFlags
@@ -143,7 +141,7 @@ class Checkpointer:
         if self.checkpoint_transfer_mode == "None":
             return self.local_checkpoint_files.exists()
         elif self.checkpoint_transfer_mode == "shared":
-            return self.checkpoint_transfer_target.exists()
+            return all(target.exists() for target in self.checkpoint_transfer_target)
         elif self.checkpoint_transfer_mode == "xrootd":
             xrootd_server_name = self.checkpoint_transfer_callback_kwargs["xrootd_server_name"]
             xrootd_client = client.FileSystem(xrootd_server_name)
