@@ -7,7 +7,7 @@ from checkpointer.checkpointer import Checkpointer
 checkpointer = Checkpointer(
     local_checkpoint_files=Path("checkpoint.txt"),
     restore_function=lambda path: int(path.read_text()),
-    checkpoint_function=lambda path, value: path[0].write_text(str(value)),
+    checkpoint_function=lambda path, value: path.write_text(str(value)),
     checkpoint_every=10,
     checkpoint_transfer_mode="htcondor",
     job_reschedule_mode="htcondor",

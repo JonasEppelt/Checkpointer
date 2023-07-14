@@ -6,8 +6,8 @@ from checkpointer.checkpointer import Checkpointer
 
 checkpointer = Checkpointer(
     local_checkpoint_files=Path("checkpoint.txt").absolute(),
-    restore_function=lambda paths: int(paths[0].read_text()),
-    checkpoint_function=lambda paths, value: paths[0].write_text(str(value)),
+    restore_function=lambda path: int(path.read_text()),
+    checkpoint_function=lambda path, value: path.write_text(str(value)),
     checkpoint_every=100,
     checkpoint_transfer_mode="xrootd",
     checkpoint_transfer_target="/pnfs/gridka.de/belle/disk-only/LOCAL/user/jeppelt/checkpoint.txt",

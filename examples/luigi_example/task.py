@@ -16,8 +16,8 @@ class Counter(luigi.Task):
     def run(self):
         checkpointer = Checkpointer(
             local_checkpoint_files=Path("checkpoint.txt"),
-            restore_function=lambda paths: int(paths[0].read_text()),
-            checkpoint_function=lambda paths, value: paths[0].write_text(
+            restore_function=lambda path: int(path.read_text()),
+            checkpoint_function=lambda path, value: path.write_text(
                 str(value)),
             checkpoint_every=10,
             checkpoint_transfer_mode="shared",
