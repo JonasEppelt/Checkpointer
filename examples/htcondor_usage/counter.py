@@ -10,7 +10,6 @@ checkpointer = Checkpointer(
     checkpoint_function=lambda path, value: path.write_text(str(value)),
     checkpoint_every=10,
     checkpoint_transfer_mode="htcondor",
-    job_reschedule_mode="htcondor",
 )
 start_value = checkpointer.restore(0)
 print("starting at: ", start_value)
