@@ -185,7 +185,7 @@ class Checkpointer:
         In shared and xrootd mode, this is a check if the checkpoint_transfer_target exists.
         '''
         if self.checkpoint_transfer_mode == "None":
-            return self.local_checkpoint_files.exists()
+            return self.local_checkpoint_file.exists()
 
         elif self.checkpoint_transfer_mode == "shared":
             return self.checkpoint_transfer_target.exists()
