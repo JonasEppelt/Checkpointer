@@ -130,7 +130,7 @@ class Checkpointer:
         '''
         if value is None:
             value = self.checkpoint_value
-        self.checkpoint_function(self.local_checkpoint_files, value)
+        self.checkpoint_function(self.local_checkpoint_file, value)
         self.checkpoint_value = value
 
     def restore(self, default):
