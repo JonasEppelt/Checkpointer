@@ -39,6 +39,22 @@ class Checkpointer:
         on_SIGTERM_prehook_kwargs: dict = None,  # kwargs to pass to on_SIGTERM_prehook
 
     ) -> None:
+        '''
+        Class to manage checkpoiniting in different contexts.
+        parameters:
+            local_checkpoint_file: Path or list of Paths of files defining the checkpoint in the current enviroment
+            checkpoint_function: function to call to create the checkpoints
+            restore_function: function to call to restore the checkpoints
+            checkpoint_transfer_mode: how to trasfer the checkpoint files, currently None(default), shared, xrootd, manual and htcondor are supported.
+            checkpoint_transfer_target: where to store the checkpoint files, if None, the current working directory is used
+            xrootd_server_name: name of the xrootd server to use in xrootd mode
+            checkpoint_transfer_callback: function to call when manual checkpoint_transfer_mode is used
+            checkpoint_transfer_callback_kwargs: kwargs to be used in in checkpoint_transfer
+            checkpoint_every: how often to create checkpoints when using the step function
+            on_SIGTERM_prehook: function to call before exiting on SIGTERM
+            on_SIGTERM_prehook_kwargs: kwargs to pass to on_SIGTERM_prehook
+        '''
+    
 
         # if only one checkpoint path is given, convert to list
         assert isinstance(
