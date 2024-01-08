@@ -1,3 +1,4 @@
+import shutil
 from typing import Callable, Union, List
 import os
 from pathlib import Path
@@ -168,13 +169,7 @@ class Checkpointer:
             return
 
         if self.checkpoint_transfer_mode == "shared":
-            # use cp to copy checkpoint on local system
-            os.system(
-                "cp {} {}".format(
-                    self.local_checkpoint_file._str,
-                    self.checkpoint_transfer_target._str
-                )
-            )
+            shutil.copy(self.local_checkpoint_file, self.checkpoint_transfer_target)
 
         elif self.checkpoint_transfer_mode == "xrootd":
             status, _ = self.xrootd_client.copy(
