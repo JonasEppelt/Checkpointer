@@ -4,10 +4,10 @@ from pathlib import Path
 import shutil
 
 class KerasCheckpointerCallback(BackupAndRestore):
-    def __init__(self, local_checkpoint_file, **checkpointer_kwargs) -> None:
+    def __init__(self, local_checkpoint_file, save_freq="epoch", **checkpointer_kwargs) -> None:
         super().__init__(
             backup_dir = local_checkpoint_file,
-            save_freq = "epoch",
+            save_freq = save_freq,
             delete_checkpoint = True,
         )
         self.zip_file = f"{local_checkpoint_file}/checkpoint.zip"
