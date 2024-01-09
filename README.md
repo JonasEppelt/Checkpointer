@@ -1,92 +1,60 @@
-# checkpointer
+# Checkpointer for HTC workflows using GPUs
 
+This tool simplifies the creation, storing, detection and restoring of checkpoints of long running GPU workflows.
+The package can be used as a stand alone application, that regularly checks for the existence of a new checkpoint, or it can interface with your trainings loops.
 
+## What are checkpoints and why do you need them?
+Checkpoints are files, that store the current state of a program and allow the program to continue from this state.
+This allows to interrupt running work flows an contiue them at a different time and place.
+Workflows with this ability have various benefits:
+     - They are resistent to crashes and failures. In cases of technical problems like hardware failures or network issues interrupting the execution, the workflow can be restartet from the last stored checkpoint.
+     - They can execute long running tasks on sites, that have thighter time constraints. If the job runs into a time limit and is eveicted, it can be rescheduled and continue from the point it left off. Time limits of sites can be differently motivated:
+        - Limiting the usage time of computing resources enables a fair scheduling and that workflows once running, can block them for a long time.
+        - The time can also be limited by the availability of renewable power. Since computing can be energy intensive and renewable energies are not always produced when needed, it makes sense to increase computing in times of increased energy supply.
 
-## Getting started
+## What is needed to successful checkpoint workflows and restart from them?
+Checkpointing a workflow needs five steps:
+    - Creating a checkpoint representing the current state of workflow.
+    - Transfering the checkpoint to a persistent storage.
+    - Rescheduling the workflow.
+    - Recovering the checkpoint from the persisten storage.
+    - Restoring the workflows state from the checkpoint.
+For each of these steps multiple solutions exist and what solution fits best depends on the concrete workflow to be checkpointed.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## What is special for ML trainings?
+For an arbitrary workflow, the current state can be very complicated to be stored. Dumping the current state of RAM, CPU, GPU can cause large checkpoints and introduce dependencies on very concrete Hard- and Software.
+In contrast, the state of a Machine Learning (ML) training can be defined by very few numbers. In the simplest case this can be just the current weights of the network. A trainings workflow could just pick up from there and continue. In reality some more information like logs of different metrics and losses, the current epoch and batch, the state of the random generator and others are usually kept. This still makes creating and recovering from checkpoints very straight forward. In fact such functionality is already implemented in common ML libraries like pytorch and tensorflow.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## What functionality does this checkpointer provide?
+This checkpointer implementation provides a standardized interface to create, transfer and restore checkpoints.
+At creation the `checkpointer` requires at minimum 3 things:
+    - The name of the checkpoint file as `local_checkpoint_file`,
+    - A checkpoint function, that takes in an arbitrary python object and creates a checkpoint file from it.
+    - A restor function, that returns the python object created from the checkpoint file.
+At every call of the `step(value)` function, the checkpointer the executes the following two steps:
+    - The `value` is stored as a internal value.
+    - The checkpoint function is executed for the given value.
+    - The checkpoint is transfered to a persisten storage.
+To restore the state, the `restore(default_value)` function can be called. It executes the following three steps:
+    - It checks, if a checkpoint exists.
+    - If none exists, it returns the default value.
+    - If a checkpoint exists, it transfers it to the place specified in `local_checkpoint_file`.
+    - It executes the restore function and returns its result.
 
-## Add your files
+## What options for persistent storage are available?
+The checkpointer currently is able to handle three transfer modes to move checkpoints to a persistent location.
+    - Per default the mode `None` is used, where the current location in `local_checkpoint_file` is assumed to be persistent and no transfers happen.
+    - The `shared` mode, assumes a mounted persistent filesystem and uses `shutil.copy` to move the `local_checkpoint_file` to the location specified in `checkpoint_transfer_target`.
+    - The `xrootd` mode uses the xrootd protocol to copy the checkpoint to a compatible storage. The storage server is defined by the `xrootd_server_name` attribute. The location on this server is set by `checkpoint_transfer_target`. This mode requires a valid certificate to be installed in the enviroment.
+    - The mode `htcondor` assumes, that the transfer of checkpoints is handled by the batch system `htcondor`. It takes the `checkpoint_transfer_target` from the HTcondor ClassAdd `TransferCheckpoint`. Additionally, it changes the exit code to the ClassAdd `CheckpointExitCode`. This signals HTcondor to reschedule the jobs and transfer the checkpoint file. For more on checkpointing with HTcondor, read [HTCondor and Self-Checkpointing Applications](https://htcondor.readthedocs.io/en/latest/users-manual/self-checkpointing-applications.html)
+    - The `manual` mode allows for a custom implementation. For that a `checkpoint_transfer_callback` function has to be provided. It takes in the `local_checkpoint_file`, the `checkpoint_transfer_target` and `checkpoint_transfer_callback_kwargs`. The same function, with `local_checkpoint_file` and `checkpoint_transfer_target` switched, is used to transfer the checkpoint back from the persistent storage. 
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## What, if the site signals the workflow to terminate itself?
+The checkpointer automatically reacts to `SIGTERM` and `SIGINT`. Upon receiving on of these signals, four things are executed:
+    - The checkpoint function is executed for the currently stored internal value.
+    - The checkpoint is transferred the the specified persisten storage.
+    - The `local_checkpoint_file` is removed if the `checkpoint_transfer_mode` is not set to `None` or `htcondor`.
+    - The program exits with the `checkpoint_exit_code` (default 85). This signal can be used by a scheduler, that the program exited without finishing, but successfully created a checkpoint.
 
-```
-cd existing_repo
-git remote add origin https://gitlab.etp.kit.edu/jeppelt/checkpointer.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.etp.kit.edu/jeppelt/checkpointer/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Creating and transfering checkpoints often can slow down my program. Is there a way to do these steps less often?
+Setting `checkpoint_every` will cause the `step(value)` function to only update the internal checkpoint and create and transfer the checkpoint only in the specified intervals. Per default. `checkpoint_every` is set to 1, creating and transfering checkpoints every time `step(value)` is called. Setting it to 10, will trigger the creation and transfering every 10th call. The reaction to `SIGTERM` and `SIGINT` are unaffected by this.
