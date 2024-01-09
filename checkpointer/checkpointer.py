@@ -139,7 +139,7 @@ class Checkpointer:
 
     def checkpoint(self, value=None):
         '''
-        Function to create a checkpoint. Calls checkpoint_function with local_checkpoint_files and value as arguments.
+        Function to create a checkpoint. It calls checkpoint_function with local_checkpoint_files and value as arguments.
         The checkpoint_function should store the checkpoint in the files given in local_checkpoint_files.
         The checkpoint_function receives the local_checkpoint_file and the value as arguments.
         If value is None, the last checkpoint_value is used.

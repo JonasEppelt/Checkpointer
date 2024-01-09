@@ -4,6 +4,15 @@ from pathlib import Path
 import shutil
 
 class KerasCheckpointerCallback(BackupAndRestore):
+    '''
+    A keras callback to interface the checkpointer with the BackupAndRestore callback. 
+    Since keras creates a whole dir structure, it will zip it before transfering.
+    The checkpointer's `step` function is executed after the BackupAndRestore's `on_epoch_end` function. 
+    The creation frequency of checkpoints must be controlled via the BackupAndRestore's `save_freq` parameter.
+    The checkpointers `checkpoint_every` parameter will only determine how often the zip archive will be created.
+    Checkpoints are restored before the training begins.
+    With the `**checkpointer_kwargs` you can pass configurations like the checkpoint transfer mode to the checkpointer.
+    '''
     def __init__(self, local_checkpoint_file, save_freq="epoch", **checkpointer_kwargs) -> None:
         super().__init__(
             backup_dir = local_checkpoint_file,
