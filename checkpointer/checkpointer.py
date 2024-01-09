@@ -135,8 +135,7 @@ class Checkpointer:
         '''
         if self.checkpoint_transfer_mode == "None":
             return
-        for file in self.local_checkpoint_files:
-            file.unlink()
+        self.local_checkpoint_file.unlink()
 
     def checkpoint(self, value=None):
         '''
