@@ -133,7 +133,7 @@ class Checkpointer:
         '''
         Removes local checkpoint files if transfer mode is not None.
         '''
-        if self.checkpoint_transfer_mode == "None":
+        if self.checkpoint_transfer_mode == "None" or self.checkpoint_transfer_mode == "htcondor":
             return
         self.local_checkpoint_file.unlink()
 
@@ -230,6 +230,12 @@ class Checkpointer:
                 )
                 if not status.ok:
                     print(status.message)
+            elif self.checkpoint_transfer_mode == "manual":
+                self.checkpoint_transfer_callback(
+                    self.checkpoint_transfer_target,
+                    self.local_checkpoint_file,
+                    **self.checkpoint_transfer_callback_kwargs
+                )
 
     def step(self, value):
         '''
