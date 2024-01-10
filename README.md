@@ -56,7 +56,10 @@ The checkpointer automatically reacts to `SIGTERM` and `SIGINT`. Upon receiving 
     - The `local_checkpoint_file` is removed if the `checkpoint_transfer_mode` is not set to `None` or `htcondor`.
     - The program exits with the `checkpoint_exit_code` (default 85). This signal can be used by a scheduler, that the program exited without finishing, but successfully created a checkpoint.
 
-## Creating and transfering checkpoints often can slow down my program. Is there a way to do these steps less often?
+## What if my python program is not the direct executable?
+In some cases, like running trainings on a batch system, programms are shipped wrapped as an executable, that takes care of setting up the enviroment, copying data and other things, before starting the actual python program. While using the checkpointer in such cases without additional modifications to the executable is possible, not all of its capabilities can be used. Namely, it  must be ensured that the underlying system can properly communicate with the program and vice versa. For that the `SIGTERM` and `SIGINT` signals have to be trapped and relayed to the python program, so that the checkpointer can react on these signals. Also it must be ensured, that the exit code of the executable is the exit code of the python program. Have a look at the HTcondor example to see how this can be setup.
+
+## Creating and transfering checkpoint files often can slow down my program. Is there a way to do these steps less often?
 Setting `checkpoint_every` will cause the `step(value)` function to only update the internal checkpoint and create and transfer the checkpoint only in the specified intervals. Per default. `checkpoint_every` is set to 1, creating and transfering checkpoints every time `step(value)` is called. Setting it to 10, will trigger the creation and transfering every 10th call. The reaction to `SIGTERM` and `SIGINT` are unaffected by this.
 
 ## I am using Keras/Lighning and can not directly access the training loop to call the `step` function. How can I use this checkpointer?
