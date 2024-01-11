@@ -226,7 +226,7 @@ class Checkpointer:
                 status, _ = self.xrootd_client.copy(
                     self.xrootd_server_name +
                     self.checkpoint_transfer_target,
-                    self.local_checkpoint_file._str,
+                    str(self.local_checkpoint_file),
                 )
                 if not status.ok:
                     print(status.message)
