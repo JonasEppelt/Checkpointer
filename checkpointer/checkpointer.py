@@ -172,7 +172,7 @@ class Checkpointer:
 
         elif self.checkpoint_transfer_mode == "xrootd":
             status, _ = self.xrootd_client.copy(
-                'file://' + self.local_checkpoint_file._str,
+                'file://' + str(self.local_checkpoint_file),
                 self.xrootd_server_name + self.checkpoint_transfer_target, force=True
             )
             if not status.ok:
