@@ -5,6 +5,7 @@ transfer_executable = true
 transfer_input_files = checkpointer.tar, counter.py
 should_transfer_files = YES
 +TransferOutput = ""
+x509userproxy= /tmp/x509up_u12290
 
 # defining logs
 log = log.txt

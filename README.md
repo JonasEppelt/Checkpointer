@@ -3,6 +3,14 @@
 This tool simplifies the creation, storing, detection and restoring of checkpoints of long running GPU workflows.
 The package can be used as a stand alone application, that regularly checks for the existence of a new checkpoint, or it can interface with your trainings loops.
 
+## Development Installation
+```bash
+git clone git@gitlab.etp.kit.edu:jeppelt/checkpointer.git 
+cd checkpointer 
+python3 -m pip install -e .
+cd ../
+```
+
 ## What are checkpoints and why do you need them?
 Checkpoints are files, that store the current state of a program and allow the program to continue from this state.
 This allows to interrupt running work flows an contiue them at a different time and place.
