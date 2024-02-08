@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import signal
 import sys
-from checkpointing_utils import get_condor_job_ad_settings
+from .checkpointing_utils import get_condor_job_ad_settings
 
 
 class Checkpointer:

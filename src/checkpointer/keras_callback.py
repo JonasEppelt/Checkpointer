@@ -1,5 +1,5 @@
 from keras.callbacks import BackupAndRestore
-from checkpointer import Checkpointer
+from .checkpointer import Checkpointer
 from pathlib import Path
 import os
 import tarfile
