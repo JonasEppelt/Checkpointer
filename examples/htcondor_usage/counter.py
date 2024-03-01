@@ -5,7 +5,7 @@ from checkpointer.checkpointer import Checkpointer
 
 
 checkpointer = Checkpointer(
-    local_checkpoint_files=Path("checkpoint.txt"),
+    local_checkpoint_file=Path("checkpoint.txt"),
     restore_function=lambda path: int(path.read_text()),
     checkpoint_function=lambda path, value: path.write_text(str(value)),
     checkpoint_every=10,
