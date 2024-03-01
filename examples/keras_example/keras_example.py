@@ -1,11 +1,10 @@
-
 # imports
 import numpy as np
 import os
 from pathlib import Path
 
 # setting the device, kears can train on
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # noqa
 import keras
 
 # import the callback for Keras
@@ -50,19 +49,19 @@ model.compile(
     ],
 )
 
-#defince the callbacks 
+# defince the callbacks
 callbacks = [
-    KerasCheckpointerCallback( # setting up the checkpointer callback
-        local_checkpoint_file="/work/jeppelt/checkpointing/checkpointer/checkpoint", # local checkpoint file
-        checkpoint_every=1, # checkpointing every epoch
-        checkpoint_transfer_mode="shared", # using a shared filesystem to move hte checkpoint to a persisten storage
-        checkpoint_transfer_target=Path("/ceph/jeppelt/checkpoint.ckpt") # the target path on the shared filesystem
+    KerasCheckpointerCallback(  # setting up the checkpointer callback
+        local_checkpoint_file="/work/jeppelt/checkpointing/checkpointer/checkpoint",  # local checkpoint file
+        checkpoint_every=1,  # checkpointing every epoch
+        checkpoint_transfer_mode="shared",  # using a shared filesystem to move hte checkpoint to a persisten storage
+        checkpoint_transfer_target=Path("/ceph/jeppelt/checkpoint.ckpt")  # the target path on the shared filesystem
     ),
     keras.callbacks.EarlyStopping(monitor="val_loss", patience=2),
 ]
 
 
-# run the training 
+# run the training
 # It will now automatically check if a checkpoint exists, load it and continue training from it.
 # Test it, by executing this program and interupting it after the first epoch. Then execute it again.
 batch_size = 128
@@ -77,6 +76,3 @@ model.fit(
     callbacks=callbacks,
 )
 score = model.evaluate(x_test, y_test, verbose=0)
-
-
-

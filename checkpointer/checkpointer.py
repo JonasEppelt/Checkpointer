@@ -1,5 +1,5 @@
 import shutil
-from typing import Callable, Union, List
+from typing import Callable, Union
 import os
 from pathlib import Path
 import signal
@@ -10,7 +10,7 @@ from checkpointer.checkpointing_utils import get_condor_job_ad_settings
 class Checkpointer:
     '''
     Class to manage checkpoiniting in different contexts.
-    Allows to 
+    Allows to
         - store and load checkpoints from remote locations
         - regulary create checkpoints
         - induce checkpoint taking from outside signals
@@ -55,7 +55,6 @@ class Checkpointer:
             on_SIGTERM_prehook: function to call before exiting on SIGTERM
             on_SIGTERM_prehook_kwargs: kwargs to pass to on_SIGTERM_prehook
         '''
-    
 
         # if only one checkpoint path is given, convert to list
         assert isinstance(
@@ -190,7 +189,7 @@ class Checkpointer:
     @property
     def checkpoint_exists(self):
         '''
-        Property to check if a previous checkpoint exists. 
+        Property to check if a previous checkpoint exists.
         Without transfer, this is just a check if the local_checkpoint_files exist.
         In shared and xrootd mode, this is a check if the checkpoint_transfer_target exists.
         '''
