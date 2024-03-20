@@ -1,5 +1,5 @@
 import shutil
-from typing import Callable, Union, List
+from typing import Callable, Union
 import os
 from pathlib import Path
 import signal
@@ -10,7 +10,7 @@ from .checkpointing_utils import get_condor_job_ad_settings
 class Checkpointer:
     '''
     Class to manage checkpoiniting in different contexts.
-    Allows to 
+    Allows to
         - store and load checkpoints from remote locations
         - regulary create checkpoints
         - induce checkpoint taking from outside signals
@@ -55,12 +55,11 @@ class Checkpointer:
             on_SIGTERM_prehook: function to call before exiting on SIGTERM
             on_SIGTERM_prehook_kwargs: kwargs to pass to on_SIGTERM_prehook
         '''
-    
 
         # if only one checkpoint path is given, convert to list
         assert isinstance(
             local_checkpoint_file, Path
-        ), "local_checkpoint_files must be a list of Paths"
+        ), "local_checkpoint_file must be a list of Paths"
         # set parameters
         self.local_checkpoint_file = local_checkpoint_file
         self.checkpoint_function = checkpoint_function
@@ -97,7 +96,7 @@ class Checkpointer:
                 checkpoint_transfer_target, str
             ), "checkpoint_transfer_target must be a string in xrootd mode"
             assert local_checkpoint_file.is_absolute(
-            ), "local_checkpoint_files must be absolute paths in xrootd mode"
+            ), "local_checkpoint_file must be absolute paths in xrootd mode"
             assert xrootd_server_name is not None, "xrootd_server_name not set"
             from XRootD import client
             from XRootD.client.flags import DirListFlags
@@ -139,8 +138,8 @@ class Checkpointer:
 
     def checkpoint(self, value=None):
         '''
-        Function to create a checkpoint. It calls checkpoint_function with local_checkpoint_files and value as arguments.
-        The checkpoint_function should store the checkpoint in the files given in local_checkpoint_files.
+        Function to create a checkpoint. It calls checkpoint_function with local_checkpoint_file and value as arguments.
+        The checkpoint_function should store the checkpoint in the files given in local_checkpoint_file.
         The checkpoint_function receives the local_checkpoint_file and the value as arguments.
         If value is None, the last checkpoint_value is used.
         '''
@@ -162,7 +161,7 @@ class Checkpointer:
     def transfer_checkpoint_files(self):
         '''
         Function to transfer checkpoint files to a remote location. Used in shared, xrootd and manual mode.
-        In manual mode, the checkpoint_transfer_callback is called with local_checkpoint_files, checkpoint_transfer_target and checkpoint_transfer_callback_kwargs as arguments.
+        In manual mode, the checkpoint_transfer_callback is called with local_checkpoint_file, checkpoint_transfer_target and checkpoint_transfer_callback_kwargs as arguments.
         '''
         if self.checkpoint_transfer_mode == "None" or not self.local_checkpoint_file.exists():
             return
@@ -190,8 +189,8 @@ class Checkpointer:
     @property
     def checkpoint_exists(self):
         '''
-        Property to check if a previous checkpoint exists. 
-        Without transfer, this is just a check if the local_checkpoint_files exist.
+        Property to check if a previous checkpoint exists.
+        Without transfer, this is just a check if the local_checkpoint_file exist.
         In shared and xrootd mode, this is a check if the checkpoint_transfer_target exists.
         '''
         if self.checkpoint_transfer_mode == "None":

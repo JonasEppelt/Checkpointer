@@ -2,7 +2,7 @@ import luigi
 from checkpointer.checkpointer import Checkpointer
 from pathlib import Path
 import time
-import numpy as np
+import random
 
 
 class Counter(luigi.Task):
@@ -15,7 +15,7 @@ class Counter(luigi.Task):
 
     def run(self):
         checkpointer = Checkpointer(
-            local_checkpoint_files=Path("checkpoint.txt"),
+            local_checkpoint_file=Path("checkpoint.txt"),
             restore_function=lambda path: int(path.read_text()),
             checkpoint_function=lambda path, value: path.write_text(
                 str(value)),
@@ -29,7 +29,7 @@ class Counter(luigi.Task):
             print(i)
             checkpointer.step(i)
             time.sleep(1)
-            if np.random.rand() < 0.1:
+            if random.random() < 0.1:
                 raise RuntimeError("random error")
 
         print("finished counting")

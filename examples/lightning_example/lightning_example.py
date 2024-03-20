@@ -31,8 +31,8 @@ test_data = datasets.FashionMNIST(
 batch_size = 256
 
 # Create data loaders.
-train_dataloader = DataLoader(training_data, batch_size=batch_size, num_workers = 4)
-test_dataloader = DataLoader(test_data, batch_size=batch_size, num_workers = 4)
+train_dataloader = DataLoader(training_data, batch_size=batch_size, num_workers=4)
+test_dataloader = DataLoader(test_data, batch_size=batch_size, num_workers=4)
 
 for X, y in test_dataloader:
     print(f"Shape of X [N, C, H, W]: {X.shape}")
@@ -40,6 +40,8 @@ for X, y in test_dataloader:
     break
 
 # create the lightning module
+
+
 class LightningModuleExample(ptl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -75,6 +77,7 @@ class LightningModuleExample(ptl.LightningModule):
         optimizer = torch.optim.SGD(self.parameters(), lr=1e-3)
         return optimizer
 
+
 model = LightningModuleExample()
 
 
@@ -88,12 +91,9 @@ checkpointer = LightningCheckpointerCallback(
 
 # create the lightning trainer instance
 epochs = 500
-trainer = Trainer(max_epochs=epochs, accelerator='gpu', callbacks = [checkpointer])
+trainer = Trainer(max_epochs=epochs, accelerator='gpu', callbacks=[checkpointer])
 # do the fitting.
-# the callbacks restor fuunction takes care of checking for checkpoints and transfering them. The trainers fit function takes care of the restoring.
-trainer.fit(model, train_dataloader, test_dataloader, ckpt_path= checkpointer.restore())
-
-
-
-
-
+# the callbacks restor fuunction takes care of checking for checkpoints
+# and transfering them. The trainers fit function takes care of the
+# restoring.
+trainer.fit(model, train_dataloader, test_dataloader, ckpt_path=checkpointer.restore())

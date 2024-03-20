@@ -1,5 +1,6 @@
 import os
 
+
 def get_condor_job_ad_settings(variable):
     file_path = os.environ.get('_CONDOR_JOB_AD')
     with open(file_path, 'r') as file:
