@@ -4,14 +4,15 @@ from pathlib import Path
 import os
 import tarfile
 
+
 def make_tarfile(output_filename, source_dir):
     with tarfile.open(output_filename, "w:gz") as tar:
         tar.add(source_dir, arcname=os.path.basename(source_dir), recursive=True)
 
+
 def extract_tar(tar_filename, extract_folder):
     with tarfile.open(tar_filename, 'r') as tar:
         tar.extractall(extract_folder)
-
 
 
 class KerasCheckpointerCallback(BackupAndRestore):
@@ -35,8 +36,10 @@ class KerasCheckpointerCallback(BackupAndRestore):
         self.local_parent_dir = os.path.dirname(local_checkpoint_file)
         self.checkpointer = Checkpointer(
             local_checkpoint_file=Path(self.zip_file),
-            checkpoint_function = lambda path, model: make_tarfile(self.zip_file, local_checkpoint_file) , # needing to zip, since keras creates a whole dir structure
-            restore_function = lambda path: extract_tar(self.zip_file, self.local_parent_dir), # needing to unzip, since keras creates a whole dir structure
+            # needing to zip, since keras creates a whole dir structure
+            checkpoint_function=lambda path, model: make_tarfile(self.zip_file, local_checkpoint_file),
+            # needing to unzip, since keras creates a whole dir structure
+            restore_function=lambda path: extract_tar(self.zip_file, self.local_parent_dir),
             **checkpointer_kwargs
         )
 

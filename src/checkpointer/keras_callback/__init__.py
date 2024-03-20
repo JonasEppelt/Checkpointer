@@ -1,1 +1,1 @@
-from .keras_callback import KerasCheckpointerCallback
+from .keras_callback import KerasCheckpointerCallback  # noqa
