@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import signal
 import sys
-from checkpointer.checkpointing_utils import get_condor_job_ad_settings
+from .checkpointing_utils import get_condor_job_ad_settings
 
 
 class Checkpointer:
@@ -171,7 +171,7 @@ class Checkpointer:
 
         elif self.checkpoint_transfer_mode == "xrootd":
             status, _ = self.xrootd_client.copy(
-                'file://' + self.local_checkpoint_file._str,
+                'file://' + str(self.local_checkpoint_file),
                 self.xrootd_server_name + self.checkpoint_transfer_target, force=True
             )
             if not status.ok:
@@ -225,7 +225,7 @@ class Checkpointer:
                 status, _ = self.xrootd_client.copy(
                     self.xrootd_server_name +
                     self.checkpoint_transfer_target,
-                    self.local_checkpoint_file._str,
+                    str(self.local_checkpoint_file),
                 )
                 if not status.ok:
                     print(status.message)

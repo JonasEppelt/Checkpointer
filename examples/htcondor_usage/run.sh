@@ -8,6 +8,9 @@ tar -xzf checkpointer.tar
 cd checkpointer_zipforship
 python3 -m pip install -e .
 cd ../
+
+xrdcp root://dcachexrootd-kit.gridka.de:1094/pnfs/gridka.de/belle/disk-only/LOCAL/user/jeppelt/keras_checkpoint3.test .
+
 ls
 
 python3 counter.py & # running the script

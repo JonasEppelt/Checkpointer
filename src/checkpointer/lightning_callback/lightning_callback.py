@@ -1,5 +1,5 @@
 from pytorch_lightning.callbacks import Callback
-from checkpointer.checkpointer import Checkpointer
+from ..checkpointer import Checkpointer
 
 
 class LightningCheckpointerCallback(Callback):

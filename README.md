@@ -4,6 +4,14 @@ This tool simplifies the creation, storage, detection, and restoration of checkp
 
 The package can be used as a standalone application that regularly checks for the existence of a new checkpoint or it can interface with your training loops.
 
+## Development Installation
+```bash
+git clone git@gitlab.etp.kit.edu:jeppelt/checkpointer.git 
+cd checkpointer 
+python3 -m pip install -e .
+cd ../
+```
+
 ## What are checkpoints and why do you need them?
 
 Checkpoints are files that store the current state of a program and allow it to continue from this state.
