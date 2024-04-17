@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptool >= 59.0"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [metadata]
