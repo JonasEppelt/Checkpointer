@@ -21,3 +21,4 @@ class TestCheckpointer(unittest.TestCase):
         load_checkpoint = self.checkpointer.restore(0)
         self.assertEqual(load_checkpoint, 9900)
 
+    
