@@ -8,7 +8,3 @@ version = 0.1.0
 description = A simple checkpointing library for Python
 author = Jonas Eppelt
 author_email = jonas.eppelt@kit.edu
-classifiers =
-    Programming Language :: Python :: 3
-    License :: OSI Approved :: MIT License
-    Operating System :: OS Independent
