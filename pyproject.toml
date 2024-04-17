@@ -3,7 +3,7 @@ requires = ["setuptools", "dataclasses"]
 build-backend = "setuptools.build_meta"
 
 [metadata]
-name = checkpointer
+name = "checkpointer"
 version = 0.1.0
 description = A simple checkpointing library for Python
 author = Jonas Eppelt
