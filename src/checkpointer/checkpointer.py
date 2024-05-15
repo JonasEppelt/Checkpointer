@@ -113,9 +113,15 @@ class Checkpointer:
                 get_condor_job_ad_settings("TransferCheckpoint")
             )
             assert self.checkpoint_transfer_target != "", "transfer_checkpoint_files not set in condor job ad"
-            self.checkpoint_exit_code = int(  # Warning! This overwrites the checkpoint_exit_code set above
-                get_condor_job_ad_settings("CheckpointExitCode")
-            )
+            # Warning! This overwrites the checkpoint_exit_code set above
+            try:
+                self.checkpoint_exit_code = int(  
+                    get_condor_job_ad_settings("CheckpointExitCode")
+                )
+            except TypeError: # in some version of HTcondor, this classAdd was renamed
+                self.checkpoint_exit_code = int(  
+                    get_condor_job_ad_settings("SuccessCheckpointExitCode")
+                )
 
     def on_SIGTERM(self, signalNumber, frame):
         '''
