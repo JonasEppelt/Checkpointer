@@ -1,4 +1,8 @@
+
+
 # Checkpointer for HTC workflows using GPUs
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JonasEppelt/Checkpointer/HEAD?labpath=examples%2Fexamples.ipynb)
 
 This tool simplifies the creation, storage, detection, and restoration of checkpoints of long-running GPU workflows.
 
