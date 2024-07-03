@@ -52,11 +52,8 @@ model.compile(
 # defince the callbacks
 callbacks = [
     KerasCheckpointerCallback( # setting up the checkpointer callback
-        local_checkpoint_file="/work/jeppelt/checkpointing/checkpointer/checkpoint", # local checkpoint file
+        local_checkpoint_file="checkpoint", # local checkpoint file
         checkpoint_every=1, # checkpointing every epoch
-        checkpoint_transfer_mode="xrootd", # using a shared filesystem to move hte checkpoint to a persisten storage
-        checkpoint_transfer_target="/pnfs/gridka.de/belle/disk-only/LOCAL/user/jeppelt/keras_checkpoint7.test", # the target path on the shared filesystem
-        xrootd_server_name="root://dcachexrootd-kit.gridka.de:1094",
     ),
     keras.callbacks.EarlyStopping(monitor="val_loss", patience=2),
 ]
