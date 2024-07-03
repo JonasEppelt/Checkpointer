@@ -1,5 +1,6 @@
 torch
 torchvision
 keras
+tensorflow
 pytorch-lightning
 numpy
