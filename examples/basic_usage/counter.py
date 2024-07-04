@@ -15,6 +15,6 @@ print("starting at: ", start_value)
 for i in range(start_value, 10_000):
     print(i)
     checkpointer.step(i)
-    time.sleep(0.1)
+    time.sleep(0.5)
 
 print("finished counting")
