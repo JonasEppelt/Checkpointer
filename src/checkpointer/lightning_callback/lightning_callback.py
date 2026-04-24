@@ -17,6 +17,9 @@ class LightningCheckpointerCallback(Callback):
             restore_function=lambda path: path,
             **checkpointer_kwargs
         )
+    def on_fit_start(self, trainer, pl_module,) -> None:
+        # initialize the checkpointer with the trainer instance so it can call the checkpoint function
+        self.checkpointer.checkpoint_value = trainer
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint):
         self.checkpointer.transfer_checkpoint_files()
