@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import signal
 import sys
+from multiprocessing import current_process
 from .checkpointing_utils import get_condor_job_ad_settings
 
 
@@ -77,9 +78,10 @@ class Checkpointer:
         self.step_counter = 0
         self.checkpoint_value = None
 
-        # register signal handlers
-        signal.signal(signal.SIGTERM, self.on_SIGTERM)
-        signal.signal(signal.SIGINT, self.on_SIGTERM)
+        # register signal handlers only in the main process
+        if current_process().name == "MainProcess":
+            signal.signal(signal.SIGTERM, self.on_SIGTERM)
+            signal.signal(signal.SIGINT, self.on_SIGTERM)
 
         # setup transfer mode
         assert self.checkpoint_transfer_mode in [
@@ -125,12 +127,17 @@ class Checkpointer:
 
     def on_SIGTERM(self, signalNumber, frame):
         '''
-        Fuction to call when SIGTERM is received. Calls on_SIGTERM_prehook and exits with checkpoint_exit_code.
+        Function to call when SIGTERM is received. Calls on_SIGTERM_prehook and exits with checkpoint_exit_code.
         Arguments are only used to match the signal handler signature.
         '''
         self.on_SIGTERM_prehook(**self.on_SIGTERM_prehook_kwargs)
-        self.checkpoint()
-        self.transfer_checkpoint_files()
+        if self.checkpoint_value is None:
+            print(
+                "Checkpointer: no checkpoint value available on SIGTERM, skipping checkpoint."
+            )
+        else:
+            self.checkpoint()
+            self.transfer_checkpoint_files()
         self.clean_up_local_checkpoint_files()
         sys.exit(self.checkpoint_exit_code)
 
